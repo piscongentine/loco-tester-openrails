@@ -1,0 +1,7 @@
+﻿# build output (the setup .exe in the repo root is the published copy)
+build*/
+dist/
+*.pdb
+# local test output
+tools/*.txt
+selftest-report.txt

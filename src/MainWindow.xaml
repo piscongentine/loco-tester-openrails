@@ -1,0 +1,690 @@
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Loco Tester" Width="1440" Height="900" MinWidth="1100" MinHeight="700"
+        Background="#0A111D" Foreground="#E6EDF7" FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display" WindowStartupLocation="CenterScreen">
+  <Window.Resources>
+    <SolidColorBrush x:Key="Bg" Color="#0A111D"/>
+    <SolidColorBrush x:Key="Panel" Color="#101A2B"/>
+    <SolidColorBrush x:Key="Panel2" Color="#16233A"/>
+    <SolidColorBrush x:Key="Panel3" Color="#1D2D49"/>
+    <SolidColorBrush x:Key="Line" Color="#243552"/>
+    <SolidColorBrush x:Key="Text" Color="#E6EDF7"/>
+    <SolidColorBrush x:Key="Muted" Color="#8C9DBA"/>
+    <SolidColorBrush x:Key="Accent" Color="#F7811E"/>
+    <SolidColorBrush x:Key="Teal" Color="#22C3B0"/>
+    <SolidColorBrush x:Key="Red" Color="#F05252"/>
+    <SolidColorBrush x:Key="Amber" Color="#F5B83D"/>
+    <SolidColorBrush x:Key="Green" Color="#3DD68C"/>
+    <LinearGradientBrush x:Key="AccentGrad" StartPoint="0,0" EndPoint="1,1">
+      <GradientStop Color="#FF9A3D" Offset="0"/>
+      <GradientStop Color="#F26A12" Offset="1"/>
+    </LinearGradientBrush>
+
+    <Style TargetType="ToolTip">
+      <Setter Property="Background" Value="#16233A"/>
+      <Setter Property="Foreground" Value="#E6EDF7"/>
+      <Setter Property="BorderBrush" Value="#2C4064"/>
+      <Setter Property="Padding" Value="8,5"/>
+    </Style>
+
+    <Style x:Key="Btn" TargetType="ButtonBase">
+      <Setter Property="Foreground" Value="#E6EDF7"/>
+      <Setter Property="Background" Value="#16233A"/>
+      <Setter Property="BorderBrush" Value="#243552"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="12,7"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ButtonBase">
+            <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="9" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="b" Property="Background" Value="#1F3150"/>
+                <Setter TargetName="b" Property="BorderBrush" Value="#35507D"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="b" Property="Background" Value="#2A4166"/>
+              </Trigger>
+              <Trigger Property="ToggleButton.IsChecked" Value="True">
+                <Setter TargetName="b" Property="Background" Value="{StaticResource AccentGrad}"/>
+                <Setter TargetName="b" Property="BorderBrush" Value="#FFB06B"/>
+                <Setter Property="Foreground" Value="#1A0F05"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.4"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="Button" BasedOn="{StaticResource Btn}"/>
+    <Style TargetType="ToggleButton" BasedOn="{StaticResource Btn}"/>
+    <Style x:Key="Primary" TargetType="Button" BasedOn="{StaticResource Btn}">
+      <Setter Property="Background" Value="{StaticResource AccentGrad}"/>
+      <Setter Property="Foreground" Value="#1A0F05"/>
+      <Setter Property="BorderBrush" Value="#FFB06B"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <!-- deck test buttons: icon glyph + label -->
+    <Style x:Key="Deck" TargetType="ButtonBase" BasedOn="{StaticResource Btn}">
+      <Setter Property="Width" Value="84"/>
+      <Setter Property="Height" Value="62"/>
+      <Setter Property="Margin" Value="0,0,8,0"/>
+      <Setter Property="Padding" Value="4"/>
+    </Style>
+
+    <Style x:Key="Tab" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="#8C9DBA"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FontSize" Value="13.5"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="b" CornerRadius="10" Padding="16,8" Background="Transparent">
+              <ContentPresenter/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="#E6EDF7"/>
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="b" Property="Background" Value="#1D2D49"/>
+                <Setter Property="Foreground" Value="#FF9A3D"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="Chip" TargetType="RadioButton">
+      <Setter Property="Foreground" Value="#8C9DBA"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="b" CornerRadius="12" Padding="10,4" Background="#101A2B" BorderBrush="#243552" BorderThickness="1">
+              <ContentPresenter/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="b" Property="Background" Value="#2A1D10"/>
+                <Setter TargetName="b" Property="BorderBrush" Value="#F7811E"/>
+                <Setter Property="Foreground" Value="#FFB06B"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="TextBox">
+      <Setter Property="Foreground" Value="#E6EDF7"/>
+      <Setter Property="CaretBrush" Value="#FF9A3D"/>
+      <Setter Property="SelectionBrush" Value="#F7811E"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border x:Name="b" Background="#0E1828" BorderBrush="#243552" BorderThickness="1" CornerRadius="9" Padding="10,7">
+              <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="b" Property="BorderBrush" Value="#F7811E"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="Slider">
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="IsMoveToPointEnabled" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Slider">
+            <Grid Height="22">
+              <Border Height="4" CornerRadius="2" Background="#22314D" VerticalAlignment="Center"/>
+              <Track x:Name="PART_Track">
+                <Track.DecreaseRepeatButton>
+                  <RepeatButton Command="Slider.DecreaseLarge" Focusable="False">
+                    <RepeatButton.Template>
+                      <ControlTemplate TargetType="RepeatButton">
+                        <Border Height="4" CornerRadius="2" Background="{StaticResource AccentGrad}" VerticalAlignment="Center"/>
+                      </ControlTemplate>
+                    </RepeatButton.Template>
+                  </RepeatButton>
+                </Track.DecreaseRepeatButton>
+                <Track.IncreaseRepeatButton>
+                  <RepeatButton Command="Slider.IncreaseLarge" Focusable="False">
+                    <RepeatButton.Template>
+                      <ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate>
+                    </RepeatButton.Template>
+                  </RepeatButton>
+                </Track.IncreaseRepeatButton>
+                <Track.Thumb>
+                  <Thumb>
+                    <Thumb.Template>
+                      <ControlTemplate TargetType="Thumb">
+                        <Ellipse Width="16" Height="16" Fill="#FFFFFF" Stroke="#F7811E" StrokeThickness="3"/>
+                      </ControlTemplate>
+                    </Thumb.Template>
+                  </Thumb>
+                </Track.Thumb>
+              </Track>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="ScrollBar">
+      <Setter Property="Width" Value="8"/>
+      <Setter Property="MinWidth" Value="8"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollBar">
+            <Track x:Name="PART_Track" IsDirectionReversed="True">
+              <Track.Thumb>
+                <Thumb>
+                  <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                      <Border CornerRadius="4" Background="#2C4064" Margin="1"/>
+                    </ControlTemplate>
+                  </Thumb.Template>
+                </Thumb>
+              </Track.Thumb>
+            </Track>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <Trigger Property="Orientation" Value="Horizontal">
+          <Setter Property="Width" Value="Auto"/>
+          <Setter Property="Height" Value="8"/>
+          <Setter Property="MinHeight" Value="8"/>
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="ScrollBar">
+                <Track x:Name="PART_Track">
+                  <Track.Thumb>
+                    <Thumb>
+                      <Thumb.Template>
+                        <ControlTemplate TargetType="Thumb">
+                          <Border CornerRadius="4" Background="#2C4064" Margin="1"/>
+                        </ControlTemplate>
+                      </Thumb.Template>
+                    </Thumb>
+                  </Track.Thumb>
+                </Track>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="Card" TargetType="Border">
+      <Setter Property="Background" Value="#101A2B"/>
+      <Setter Property="BorderBrush" Value="#1E2C46"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="14"/>
+      <Setter Property="Padding" Value="16"/>
+    </Style>
+    <Style x:Key="H" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11.5"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Foreground" Value="#8C9DBA"/>
+      <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+
+    <Style x:Key="LocoItem" TargetType="ListBoxItem">
+      <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="b" Margin="0,0,0,6" CornerRadius="12" Padding="12,10" Background="#101A2B" BorderBrush="#1A2740" BorderThickness="1">
+              <ContentPresenter/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="b" Property="Background" Value="#14213A"/>
+                <Setter TargetName="b" Property="BorderBrush" Value="#2C4064"/>
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="b" Property="Background" Value="#1D2D49"/>
+                <Setter TargetName="b" Property="BorderBrush" Value="#F7811E"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="64"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="28"/>
+    </Grid.RowDefinitions>
+
+    <!-- ===== header ===== -->
+    <Border Grid.Row="0" Background="#0D1626" BorderBrush="#1A2740" BorderThickness="0,0,0,1">
+      <Grid Margin="16,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <Image x:Name="HeaderLogo" Width="40" Height="40" RenderOptions.BitmapScalingMode="HighQuality"/>
+          <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+            <TextBlock Text="Loco Tester" FontSize="18" FontWeight="Bold"/>
+            <TextBlock x:Name="HeaderVersion" FontSize="11" Foreground="#8C9DBA"/>
+          </StackPanel>
+        </StackPanel>
+        <Grid Grid.Column="1" Margin="40,0,20,0" VerticalAlignment="Center" MaxWidth="760">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <TextBox x:Name="FolderBox" ToolTip="Open Rails / MSTS folder, the TRAINS folder or TRAINSET (press Enter to load)"/>
+          <Button x:Name="BrowseBtn" Grid.Column="1" Margin="8,0,0,0" Content="Browse…"/>
+          <Button x:Name="RescanBtn" Grid.Column="2" Margin="8,0,0,0" Content="⟳  Rescan" ToolTip="Rescan locomotives (F5)"/>
+        </Grid>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+          <TextBlock Text="VOL" Foreground="#8C9DBA" FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+          <Slider x:Name="MasterVol" Width="110" Minimum="0" Maximum="1" Value="0.7" VerticalAlignment="Center"/>
+          <Border Width="6" Height="28" CornerRadius="3" Background="#1A2740" Margin="10,0,0,0" VerticalAlignment="Center">
+            <Border x:Name="LevelBar" VerticalAlignment="Bottom" Height="0" CornerRadius="3" Background="{StaticResource Teal}"/>
+          </Border>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- ===== body ===== -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="340"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- loco list -->
+      <Border Background="#0C1524" BorderBrush="#1A2740" BorderThickness="0,0,1,0">
+        <Grid Margin="14,14,10,10">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <TextBox x:Name="SearchBox" ToolTip="Search locomotives (Ctrl+F)"/>
+          <TextBlock x:Name="SearchHint" Text="🔍  Search locomotives…" IsHitTestVisible="False" Foreground="#5D6F8F" Margin="12,0,0,0" VerticalAlignment="Center"/>
+          <WrapPanel Grid.Row="1" Margin="0,10,0,4">
+            <RadioButton x:Name="FAll" Style="{StaticResource Chip}" Content="All" IsChecked="True" GroupName="f"/>
+            <RadioButton x:Name="FElectric" Style="{StaticResource Chip}" Content="Electric" GroupName="f"/>
+            <RadioButton x:Name="FDiesel" Style="{StaticResource Chip}" Content="Diesel" GroupName="f"/>
+            <RadioButton x:Name="FSteam" Style="{StaticResource Chip}" Content="Steam" GroupName="f"/>
+            <RadioButton x:Name="FProblems" Style="{StaticResource Chip}" Content="⚠ Problems" GroupName="f"/>
+          </WrapPanel>
+          <TextBlock x:Name="ListCount" Grid.Row="2" Foreground="#5D6F8F" FontSize="11.5" Margin="2,4,0,8"/>
+          <ListBox x:Name="LocoList" Grid.Row="3" Background="Transparent" BorderThickness="0" ItemContainerStyle="{StaticResource LocoItem}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel>
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5" TextTrimming="CharacterEllipsis" Foreground="#E6EDF7"/>
+                    <TextBlock Text="{Binding Folder}" FontSize="11.5" Foreground="#7385A6" TextTrimming="CharacterEllipsis" Margin="0,2,0,6"/>
+                    <StackPanel Orientation="Horizontal">
+                      <Border CornerRadius="6" Padding="7,1" Background="{Binding TypeBrush}">
+                        <TextBlock Text="{Binding Type}" FontSize="10.5" FontWeight="SemiBold" Foreground="#0A111D"/>
+                      </Border>
+                      <TextBlock Text="{Binding Extra}" FontSize="11" Foreground="#7385A6" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right" Orientation="Horizontal" ToolTip="{Binding HealthText}">
+                    <Ellipse Width="9" Height="9" Fill="{Binding HealthBrush}" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Border>
+
+      <!-- right side -->
+      <Grid Grid.Column="1" Margin="18,14,18,12">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- loco title -->
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+          <StackPanel>
+            <TextBlock x:Name="LocoTitle" Text="Pick a locomotive" FontSize="24" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+            <TextBlock x:Name="LocoSub" Foreground="#8C9DBA" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+            <Button x:Name="OpenFolderBtn" Content="📁  Folder" Margin="0,0,8,0" ToolTip="Open the loco folder in Explorer"/>
+            <Button x:Name="OpenEngBtn" Content="📝  .eng" Margin="0,0,8,0" ToolTip="Open the .eng in Notepad"/>
+            <Button x:Name="RepairBtn" Style="{StaticResource Primary}" Content="🛠  Repair sounds" ToolTip="Back up, then fix sound problems automatically"/>
+          </StackPanel>
+        </Grid>
+
+        <!-- tabs -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,14,0,10">
+          <RadioButton x:Name="TabOverview" Style="{StaticResource Tab}" Content="Overview" IsChecked="True" GroupName="t"/>
+          <RadioButton x:Name="Tab3D" Style="{StaticResource Tab}" Content="3D View" GroupName="t"/>
+          <RadioButton x:Name="TabCab" Style="{StaticResource Tab}" Content="Cab" GroupName="t"/>
+          <RadioButton x:Name="TabSound" Style="{StaticResource Tab}" Content="Sound Lab" GroupName="t"/>
+          <RadioButton x:Name="TabAbout" Style="{StaticResource Tab}" Content="About" GroupName="t"/>
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+          <!-- ===== overview ===== -->
+          <ScrollViewer x:Name="PageOverview" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+              <UniformGrid x:Name="StatGrid" Columns="4" Margin="-5,0,-5,0"/>
+              <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="3*"/>
+                  <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}" Margin="0,0,10,0">
+                  <StackPanel>
+                    <Grid>
+                      <TextBlock Style="{StaticResource H}" Text="HEALTH CHECK"/>
+                      <TextBlock x:Name="HealthSummary" HorizontalAlignment="Right" FontSize="11.5" Foreground="#8C9DBA"/>
+                    </Grid>
+                    <ItemsControl x:Name="IssueList">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Grid Margin="0,4">
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="18"/>
+                              <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Ellipse Width="8" Height="8" Fill="{Binding Brush}" VerticalAlignment="Top" Margin="0,5,0,0"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Text}" TextWrapping="Wrap" Foreground="#D5DEEC"/>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="RepairReport" TextWrapping="Wrap" Foreground="#9FB0CC" FontSize="12" Margin="0,10,0,0" FontFamily="Cascadia Mono, Consolas"/>
+                  </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource Card}">
+                  <StackPanel>
+                    <TextBlock Style="{StaticResource H}" Text="FILES"/>
+                    <TextBlock x:Name="FilesText" TextWrapping="Wrap" Foreground="#D5DEEC" LineHeight="20"/>
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- ===== 3D ===== -->
+          <Border x:Name="Page3D" Visibility="Collapsed" CornerRadius="16" ClipToBounds="True" BorderBrush="#1E2C46" BorderThickness="1">
+            <Border.Background>
+              <RadialGradientBrush Center="0.5,0.35" RadiusX="0.9" RadiusY="0.9">
+                <GradientStop Color="#1B2A44" Offset="0"/>
+                <GradientStop Color="#0A111D" Offset="1"/>
+              </RadialGradientBrush>
+            </Border.Background>
+            <Grid>
+              <Border x:Name="ViewHost" Background="Transparent" Cursor="SizeAll"/>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="14">
+                <Button x:Name="CamFront" Content="Front" Margin="0,0,6,0"/>
+                <Button x:Name="CamSide" Content="Side" Margin="0,0,6,0"/>
+                <Button x:Name="CamRear" Content="Rear" Margin="0,0,6,0"/>
+                <Button x:Name="CamTop" Content="Top" Margin="0,0,6,0"/>
+                <Button x:Name="Cam34" Content="¾" Margin="0,0,6,0"/>
+                <Button x:Name="CamPov" Content="👁  Cab POV" Margin="0,0,6,0" ToolTip="Driver's eye view inside the 3D model (drag to look around)"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="14">
+                <ToggleButton x:Name="HdTgl" Content="HD" IsChecked="True" Margin="0,0,6,0" ToolTip="Full-resolution textures with high-quality filtering (turn off on slow PCs)"/>
+                <ToggleButton x:Name="ShedTgl" Content="🏭  Workshop" IsChecked="True" Margin="0,0,6,0" ToolTip="Loco shed with inspection pit (off = open track)"/>
+                <ToggleButton x:Name="SmokeTgl" Content="💨  Smoke" IsChecked="True" Margin="0,0,6,0" ToolTip="Exhaust smoke / steam from the .eng Effects outlets (denser with throttle)"/>
+                <ToggleButton x:Name="NightTgl" Content="🌙  Night" Margin="0,0,6,0"/>
+                <ToggleButton x:Name="RearUnitTgl" Content="🚃  Train behind" Margin="0,0,6,0" ToolTip="Coaches coupled behind the loco: the red tail lights go off"/>
+                <ToggleButton x:Name="SpinTgl" Content="⟲  Turntable"/>
+              </StackPanel>
+              <Border VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="12,0,0,10" Background="#B30A111D" CornerRadius="8" Padding="10,6"><TextBlock x:Name="ViewInfo" Foreground="#A9B8D2" FontSize="11.5"/></Border>
+              <Border VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,12,10" Background="#B30A111D" CornerRadius="8" Padding="10,6"><TextBlock Text="Drag: rotate · Right-drag: pan · Wheel: zoom · Double-click: reset" Foreground="#7F90AE" FontSize="11.5"/></Border>
+              <TextBlock x:Name="ViewLoading" Text="Loading 3D model…" FontSize="15" Foreground="#8C9DBA" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+            </Grid>
+          </Border>
+
+          <!-- ===== cab ===== -->
+          <Border x:Name="PageCab" Visibility="Collapsed" CornerRadius="16" ClipToBounds="True" Background="#05090F" BorderBrush="#1E2C46" BorderThickness="1">
+            <Grid>
+              <Viewbox Stretch="Uniform" Margin="10,56,10,40">
+                <Grid x:Name="CabCanvasHost" Width="640" Height="480">
+                  <Image x:Name="CabImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                  <Canvas x:Name="CabHotspots"/>
+                  <Canvas x:Name="CabFx" IsHitTestVisible="False"/>
+                </Grid>
+              </Viewbox>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="14">
+                <RadioButton x:Name="CabFront" Style="{StaticResource Chip}" Content="Front" IsChecked="True" GroupName="cv"/>
+                <RadioButton x:Name="CabLeft" Style="{StaticResource Chip}" Content="Left" GroupName="cv"/>
+                <RadioButton x:Name="CabRight" Style="{StaticResource Chip}" Content="Right" GroupName="cv"/>
+                <RadioButton x:Name="CabRear" Style="{StaticResource Chip}" Content="Rear cab" GroupName="cv"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="14">
+                <ToggleButton x:Name="CabNightTgl" Content="🌙  Night" Margin="0,0,6,0"/>
+                <ToggleButton x:Name="CabLightTgl" Content="💡  Cab light" Margin="0,0,6,0" ToolTip="Shows the CABVIEW\CABLIGHT images (L)"/>
+                <ToggleButton x:Name="CabHotTgl" Content="▦  Controls" IsChecked="True" ToolTip="Highlight clickable cab controls"/>
+              </StackPanel>
+              <TextBlock x:Name="CabInfo" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="16,0,0,12" Foreground="#8C9DBA" FontSize="12"/>
+              <TextBlock x:Name="CabEmpty" Text="This loco has no 2D cab view" FontSize="15" Foreground="#8C9DBA" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+            </Grid>
+          </Border>
+
+          <!-- ===== sound lab ===== -->
+          <Grid x:Name="PageSound" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="300"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,12,0">
+              <StackPanel>
+                <Border Style="{StaticResource Card}" Margin="0,0,0,10">
+                  <StackPanel>
+                    <TextBlock Style="{StaticResource H}" Text="LISTEN FROM"/>
+                    <StackPanel Orientation="Horizontal">
+                      <RadioButton x:Name="EarOutside" Style="{StaticResource Chip}" Content="Outside" IsChecked="True" GroupName="ear"/>
+                      <RadioButton x:Name="EarCab" Style="{StaticResource Chip}" Content="Inside cab" GroupName="ear"/>
+                    </StackPanel>
+                    <TextBlock x:Name="SmsName" Foreground="#7385A6" FontSize="11.5" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="0,0,0,10">
+                  <StackPanel x:Name="VarPanel">
+                    <TextBlock Style="{StaticResource H}" Text="SOUND INPUTS"/>
+                  </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                  <StackPanel>
+                    <TextBlock Style="{StaticResource H}" Text="EVERY TRIGGER IN THIS FILE"/>
+                    <WrapPanel x:Name="TriggerPanel"/>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </ScrollViewer>
+            <Grid Grid.Column="1">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="170"/>
+              </Grid.RowDefinitions>
+              <Border Style="{StaticResource Card}" Padding="10">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                  </Grid.RowDefinitions>
+                  <TextBlock Style="{StaticResource H}" Text="STREAMS  (live)" Margin="6,2,0,8"/>
+                  <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="StreamList">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Border CornerRadius="8" Padding="10,6" Margin="0,0,0,4" Background="{Binding RowBrush}">
+                            <Grid>
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="34"/>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="110"/>
+                              </Grid.ColumnDefinitions>
+                              <TextBlock Text="{Binding Index}" Foreground="#5D6F8F"/>
+                              <TextBlock Grid.Column="1" Text="{Binding What}" TextTrimming="CharacterEllipsis" Foreground="#D5DEEC"/>
+                              <TextBlock Grid.Column="2" Text="{Binding File}" TextTrimming="CharacterEllipsis" Foreground="#8C9DBA" Margin="8,0"/>
+                              <Border Grid.Column="3" Height="6" CornerRadius="3" Background="#1A2740" VerticalAlignment="Center">
+                                <Border HorizontalAlignment="Left" Width="{Binding Bar}" CornerRadius="3" Background="{StaticResource Teal}"/>
+                              </Border>
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Grid>
+              </Border>
+              <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,10,0,0" Padding="12">
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                  </Grid.RowDefinitions>
+                  <TextBlock Style="{StaticResource H}" Text="EVENT LOG"/>
+                  <ListBox x:Name="EventLog" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="#9FB0CC" FontFamily="Cascadia Mono, Consolas" FontSize="11.5"/>
+                </Grid>
+              </Border>
+            </Grid>
+          </Grid>
+
+          <!-- ===== about ===== -->
+          <ScrollViewer x:Name="PageAbout" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+            <Border Style="{StaticResource Card}" Padding="36" MaxWidth="980" HorizontalAlignment="Left">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="200"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                  <Image x:Name="AboutLogo" Width="180" Height="180" RenderOptions.BitmapScalingMode="HighQuality"/>
+                  <Border Margin="10,18,10,0" Height="6" CornerRadius="3">
+                    <Border.Background>
+                      <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#FF9933" Offset="0"/>
+                        <GradientStop Color="#FF9933" Offset="0.333"/>
+                        <GradientStop Color="#FFFFFF" Offset="0.333"/>
+                        <GradientStop Color="#FFFFFF" Offset="0.666"/>
+                        <GradientStop Color="#138808" Offset="0.666"/>
+                        <GradientStop Color="#138808" Offset="1"/>
+                      </LinearGradientBrush>
+                    </Border.Background>
+                  </Border>
+                  <TextBlock Text="Made in Bharat" HorizontalAlignment="Center" Margin="0,8,0,0" FontWeight="SemiBold" Foreground="#FFB06B"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="28,0,0,0">
+                  <TextBlock Text="Loco Tester" FontSize="34" FontWeight="Bold"/>
+                  <TextBlock x:Name="AboutVersion" FontSize="15" Foreground="#FF9A3D" Margin="0,2,0,0"/>
+                  <TextBlock FontSize="14" Foreground="#C9D5E8" Margin="0,14,0,0" TextWrapping="Wrap">
+                    Made by <Run FontWeight="Bold" Foreground="#FFFFFF">Piscongentine</Run> · Made in Bharat
+                  </TextBlock>
+                  <TextBlock FontSize="13.5" Foreground="#9FB0CC" Margin="0,14,0,0" TextWrapping="Wrap" LineHeight="21">
+                    A workbench for Open Rails and MSTS locomotives. Point it at your Open Rails folder and every
+                    locomotive is listed in a moment. Pick one to look at it in 3D, sit in its cab, sound its horn,
+                    raise its pantograph and run it from 0 to 100 km/h while you listen to every sound stage.
+                    When something is broken, Loco Tester finds it and can fix it for you.
+                  </TextBlock>
+                  <TextBlock Text="FEATURES" Style="{StaticResource H}" Margin="0,22,0,8"/>
+                  <TextBlock x:Name="FeatureText" FontSize="13" Foreground="#D5DEEC" TextWrapping="Wrap" LineHeight="22"/>
+                  <TextBlock Text="KEYBOARD" Style="{StaticResource H}" Margin="0,18,0,8"/>
+                  <TextBlock x:Name="KeysText" FontSize="12.5" Foreground="#9FB0CC" TextWrapping="Wrap" LineHeight="20" FontFamily="Cascadia Mono, Consolas"/>
+                  <Grid Margin="0,22,0,8">
+                    <TextBlock Text="THIS PC · REQUIREMENTS" Style="{StaticResource H}" VerticalAlignment="Center" Margin="0"/>
+                    <Button x:Name="SysCheckBtn" Content="🔎  Check this PC" HorizontalAlignment="Right" Padding="12,5"/>
+                  </Grid>
+                  <TextBlock FontSize="12.5" Foreground="#9FB0CC" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,8"
+                             Text="Needs: Windows 10 or 11 · .NET Framework 4.8 (built into Windows 10/11) · a graphics card with DirectX hardware 3D for the HD preview · speakers or headphones for sound · an Open Rails or MSTS folder with TRAINS\TRAINSET. Optional: DB Tracks for the real track in the 3D view."/>
+                  <StackPanel x:Name="SysCheckRows"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </ScrollViewer>
+        </Grid>
+
+        <!-- ===== control deck ===== -->
+        <Border x:Name="Deck" Grid.Row="3" Style="{StaticResource Card}" Margin="0,12,0,0" Padding="14,12">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <WrapPanel x:Name="DeckButtons"/>
+            <Grid Grid.Row="1" Margin="0,12,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Text="SPEED" Foreground="#8C9DBA" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+              <Slider x:Name="SpeedSlider" Grid.Column="1" Minimum="0" Maximum="160" VerticalAlignment="Center"/>
+              <TextBlock x:Name="SpeedText" Grid.Column="2" Text="0 km/h" FontSize="20" FontWeight="Bold" Width="110" TextAlignment="Right" VerticalAlignment="Center" Margin="10,0,24,0"/>
+              <TextBlock Grid.Column="3" Text="THROTTLE" Foreground="#8C9DBA" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0"/>
+              <Slider x:Name="ThrottleSlider" Grid.Column="4" Minimum="0" Maximum="100" VerticalAlignment="Center"/>
+              <TextBlock x:Name="ThrottleText" Grid.Column="5" Text="0 %" Width="52" TextAlignment="Right" VerticalAlignment="Center" Margin="8,0,16,0" FontWeight="SemiBold"/>
+              <StackPanel Grid.Column="6" Orientation="Horizontal">
+                <Button x:Name="RunBtn" Style="{StaticResource Primary}" Content="▶  Run 0 → 100" Padding="16,8" ToolTip="Accelerate to 100 km/h (or top speed), then brake to a stop (R)"/>
+                <Button x:Name="StopBtn" Content="■  Stop" Margin="8,0,0,0" Padding="14,8" ToolTip="Stop the run and all sounds (Esc)"/>
+              </StackPanel>
+            </Grid>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+
+    <!-- ===== status bar ===== -->
+    <Border Grid.Row="2" Background="#0D1626" BorderBrush="#1A2740" BorderThickness="0,1,0,0">
+      <Grid Margin="14,0">
+        <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="#7385A6" FontSize="11.5"/>
+        <TextBlock x:Name="StatusRight" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="#5D6F8F" FontSize="11.5"/>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>
