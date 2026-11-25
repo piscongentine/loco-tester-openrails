@@ -135,13 +135,33 @@ namespace LocoTester
         public bool Releasing;       // finish current pass then stop (or play tail)
         public bool Stopped;
         public float Fade = 1, FadeTarget = 1;
+        public float FadeRate = 0.002f;   // per output frame; 0.002 ≈ 11 ms, 0.0001 ≈ 0.23 s
         public object Tag;
 
-        public void Release()
+        /// <summary>True when the file has an ending part after the loop (MSTS cue points: attack | loop | tail).</summary>
+        public bool HasTail { get { return Wav != null && LoopEnd > LoopStart && LoopEnd < Wav.Frames - 256; } }
+
+        /// <summary>The button was released (horn, bell, sander ...), like MSTS / Open Rails:
+        /// a sound with cue points stops looping and plays its ending part (with "jump": straight away,
+        /// without finishing the current loop pass); a sound without an ending part fades out smoothly.</summary>
+        public void Release(bool jump)
         {
+            if (Releasing) return;
             Releasing = true;
-            Loop = false;
+            if (Loop && HasTail)
+            {
+                Loop = false;
+                if (jump && Pos < LoopEnd) Pos = LoopEnd;
+            }
+            else if (Loop)
+            {
+                Loop = false;
+                FadeRate = 0.0001f;
+                FadeTarget = 0;
+            }
         }
+
+        public void Release() { Release(false); }
     }
 
     public sealed class AudioEngine : IDisposable
@@ -283,13 +303,18 @@ namespace LocoTester
                 if (step <= 0) step = 0.0001;
                 int ch = w.Channels;
                 float[] s = w.Samples;
+                // last frame we can interpolate from is Frames-2, so a whole-file loop must wrap at Frames-1.
+                // (Wrapping at Frames let the end-of-file check below stop every loop without cue points after
+                // one pass: diesel engine sounds such as the WDP4D's went silent after a few seconds.)
+                int loopEnd = Math.Min(v.LoopEnd, w.Frames - 1);
+                int loopStart = Math.Max(0, Math.Min(v.LoopStart, loopEnd - 1));
                 for (int f = 0; f < Frames; f++)
                 {
                     // fade smoothing (avoids clicks when volume jumps)
-                    v.Fade += (v.FadeTarget - v.Fade) * 0.002f;
+                    v.Fade += (v.FadeTarget - v.Fade) * v.FadeRate;
                     double p = v.Pos;
                     int i0 = (int)p;
-                    if (v.Loop && i0 >= v.LoopEnd) { v.Pos = v.LoopStart + (p - v.LoopEnd); p = v.Pos; i0 = (int)p; }
+                    if (v.Loop && loopEnd > loopStart && i0 >= loopEnd) { v.Pos = loopStart + (p - loopEnd); p = v.Pos; i0 = (int)p; }
                     if (i0 >= w.Frames - 1) { v.Stopped = true; break; }
                     float t = (float)(p - i0);
                     float g = v.Volume * v.Fade;

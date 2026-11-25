@@ -67,27 +67,40 @@ namespace LocoTester
         /// <summary>Image for a view, optionally the NIGHT or CABLIGHT version.</summary>
         public string ImagePath(int view, bool night, bool cabLight)
         {
-            if (view < 0 || view >= Views.Count || Views[view].Image == null) return null;
-            string dir = System.IO.Path.GetDirectoryName(Path);
-            string img = Views[view].Image;
-            if (cabLight)
-            {
-                string p = System.IO.Path.Combine(System.IO.Path.Combine(dir, "CABLIGHT"), img);
-                if (File.Exists(p)) return p;
-            }
-            if (night || cabLight)
-            {
-                string p = System.IO.Path.Combine(System.IO.Path.Combine(dir, "NIGHT"), img);
-                if (File.Exists(p)) return p;
-            }
-            string d = System.IO.Path.Combine(dir, img);
-            return File.Exists(d) ? d : null;
+            string day = DayImage(view);
+            if (day == null) return null;
+            if (cabLight) { string p = Variant(day, "CABLIGHT"); if (p != null) return p; }
+            if (night || cabLight) { string p = Variant(day, "NIGHT"); if (p != null) return p; }
+            return File.Exists(day) ? day : null;
         }
 
+        /// <summary>Full path of a view's day image (the .cvf may point into another folder, e.g. ..\CABVIEW\front.ace).</summary>
+        string DayImage(int view)
+        {
+            if (view < 0 || view >= Views.Count || string.IsNullOrEmpty(Views[view].Image)) return null;
+            try { return System.IO.Path.GetFullPath(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Path), Views[view].Image)); }
+            catch { return null; }
+        }
+
+        /// <summary>Open Rails looks for the lit / night image in a CABLIGHT / NIGHT folder next to the day image.</summary>
+        static string Variant(string dayImage, string folder)
+        {
+            string p = System.IO.Path.Combine(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(dayImage), folder), System.IO.Path.GetFileName(dayImage));
+            return File.Exists(p) ? p : null;
+        }
+
+        /// <summary>True when this view has a CABLIGHT image (the cab light visibly turns on and off).</summary>
         public bool HasCabLight(int view)
         {
-            if (view < 0 || view >= Views.Count || Views[view].Image == null) return false;
-            return File.Exists(System.IO.Path.Combine(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Path), "CABLIGHT"), Views[view].Image));
+            string day = DayImage(view);
+            return day != null && Variant(day, "CABLIGHT") != null;
+        }
+
+        /// <summary>True when any view of this cab has a CABLIGHT image.</summary>
+        public bool HasAnyCabLight()
+        {
+            for (int i = 0; i < Views.Count; i++) if (HasCabLight(i)) return true;
+            return false;
         }
     }
 }

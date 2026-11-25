@@ -9,9 +9,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCompany("Piscongentine")]
 [assembly: AssemblyProduct("Loco Tester")]
 [assembly: AssemblyCopyright("© 2026 Piscongentine")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
-[assembly: AssemblyInformationalVersion("1.0 \"First Light\"")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyInformationalVersion("1.1 \"Power Up\"")]
 [assembly: ComVisible(false)]
 
 namespace LocoTester
@@ -19,8 +19,8 @@ namespace LocoTester
     public static class AppInfo
     {
         public const string Name = "Loco Tester";
-        public const string Version = "1.0";
-        public const string VersionName = "First Light";
+        public const string Version = "1.1";
+        public const string VersionName = "Power Up";
         public const string Author = "Piscongentine";
     }
 
@@ -43,6 +43,46 @@ namespace LocoTester
             {
                 AttachConsole(-1);
                 return SoundTest(args[1], args.Length > 2 ? args[2] : @"C:\OR");
+            }
+            if (args.Length >= 1 && args[0] == "--cablights")
+            {
+                // --cablights [folder]: which locos have a working cab light (CABLIGHT images) in their cab views
+                AttachConsole(-1);
+                string ts, root;
+                if (!LocoScanner.ResolveFolders(args.Length > 1 ? args[1] : @"C:\OR", out ts, out root)) { Console.WriteLine("folder not found"); return 1; }
+                int yes = 0, no = 0, none = 0;
+                foreach (Loco l in LocoScanner.Scan(ts, root, null))
+                {
+                    string state = "no cab view";
+                    for (int i = 0; i < Math.Max(1, l.CabViews.Count); i++)
+                    {
+                        string p = l.CabViewPath(i);
+                        if (p == null) continue;
+                        CabFile c = CabFile.Load(p);
+                        int lit = 0; for (int v = 0; v < c.Views.Count; v++) if (c.HasCabLight(v)) lit++;
+                        state = lit > 0 ? "CAB LIGHT (" + lit + "/" + c.Views.Count + " views lit)" : "no cab light";
+                        if (lit > 0) break;
+                    }
+                    if (state.StartsWith("CAB")) yes++; else if (state == "no cab light") no++; else none++;
+                    Console.WriteLine(string.Format("{0,-44} {1}", l.DisplayName.Length > 44 ? l.DisplayName.Substring(0, 44) : l.DisplayName, state));
+                }
+                Console.WriteLine("with cab light: " + yes + " · without: " + no + " · no cab view: " + none);
+                return 0;
+            }
+            if (args.Length >= 4 && args[0] == "--swap")
+            {
+                // --swap <eng> horn|bell|sander <file.wav>|restore [orRoot]  (same as the Replace sounds window)
+                AttachConsole(-1);
+                string orRoot = args.Length > 4 ? args[4] : @"C:\OR";
+                Loco l = Loco.Load(args[1], orRoot);
+                foreach (SwapSlot s in SoundSwap.Slots(l))
+                    if (s.Id == args[2])
+                    {
+                        try { Console.WriteLine(args[3] == "restore" ? SoundSwap.Restore(l, s) : SoundSwap.Replace(l, s, args[3], true)); return 0; }
+                        catch (Exception ex) { Console.WriteLine("failed: " + ex.Message); return 1; }
+                    }
+                Console.WriteLine("this loco has no " + args[2] + " sound");
+                return 1;
             }
             return Gui.Run(args);
         }

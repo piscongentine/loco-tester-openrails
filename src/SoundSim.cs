@@ -54,6 +54,7 @@ namespace LocoTester
         public bool[] Disabled;
         public string LastFile;
         public string LastEvent = "";
+        public bool IsEngine;      // current voice is an engine loop (follows SoundSim.Spool)
         int seq;
         static readonly Random rnd = new Random();
 
@@ -121,8 +122,20 @@ namespace LocoTester
         public SmsGroup Group { get { return group; } }
         public IList<StreamPlayer> Players { get { return players; } }
 
+        /// <summary>True between Start() and Stop(): the engine sound is running.</summary>
+        public bool Running { get; private set; }
+
+        /// <summary>Engine spin, 0..1: 1 = running normally. Power on ramps it up from 0 (start-up: slow,
+        /// low-pitched cranking that rises to idle); power off ramps it down to 0 (run-down).
+        /// It scales the volume and pitch of the engine streams (loops started by Initial / Variable triggers).</summary>
+        public double Spool = 1;
+        /// <summary>Seconds since Start(), used for the starter-motor chug while Spool is low.</summary>
+        public double SinceStart;
+
         public void Start(SimState s)
         {
+            Running = true;
+            SinceStart = 0;
             last = s.Clone();
             foreach (StreamPlayer p in players)
                 for (int i = 0; i < p.Stream.Triggers.Count; i++)
@@ -136,7 +149,8 @@ namespace LocoTester
 
         public void Stop()
         {
-            foreach (StreamPlayer p in players) { if (p.Current != null) p.Current.FadeTarget = 0; p.Current = null; }
+            Running = false;
+            foreach (StreamPlayer p in players) { if (p.Current != null) p.Current.FadeTarget = 0; p.Current = null; p.IsEngine = false; }
         }
 
         /// <summary>Fires a discrete trigger (horn, bell, pantograph, brakes ...). Returns how many streams reacted.</summary>
@@ -183,15 +197,28 @@ namespace LocoTester
             if (p.Current == null) return;
             double vol = p.Stream.Volume * group.Volume * p.StreamVolume;
             foreach (SmsCurve c in p.Stream.VolumeCurves) vol *= c.Eval(CurveValue(s, c.Control));
-            p.Current.Volume = (float)Math.Max(0, Math.Min(4, vol)) * 0.5f;
+            double pitch = 1;
             if (p.Stream.FrequencyCurve != null && p.Current.Wav != null && p.Current.Wav.Rate > 0)
             {
                 double hz = p.Stream.FrequencyCurve.Eval(CurveValue(s, p.Stream.FrequencyCurve.Control));
                 if (hz <= 1) hz = p.Current.Wav.Rate;   // curve point "0" means: play at the file's own rate
-                p.Current.Pitch = Math.Max(0.05, Math.Min(4, Math.Abs(hz) / p.Current.Wav.Rate));
+                pitch = Math.Abs(hz) / p.Current.Wav.Rate;
             }
+            if (p.IsEngine && Spool < 0.999)
+            {
+                double sp = Math.Max(0, Spool);
+                // cranking: the starter turns the engine over in pulses until it fires (first ~1.6 s of a start)
+                double chug = SinceStart < 1.6 && sp < 0.6 ? 0.75 + 0.25 * Math.Abs(Math.Sin(SinceStart * Math.PI * 3.2)) : 1;
+                vol *= Math.Min(1, sp * 1.4) * chug;
+                pitch *= 0.72 + 0.28 * sp;     // a real engine turns over slower, not a slowed-down tape
+            }
+            p.Current.Volume = (float)Math.Max(0, Math.Min(4, vol)) * 0.5f;
+            if (p.Stream.FrequencyCurve != null || p.IsEngine) p.Current.Pitch = Math.Max(0.05, Math.Min(4, pitch));
             if (p.Current.Stopped) p.Current = null;
         }
+
+        /// <summary>Re-applies volume / pitch now (used while the engine spools up or down).</summary>
+        public void Refresh(SimState s) { foreach (StreamPlayer p in players) ApplyCurves(p, s); }
 
         void Run(StreamPlayer p, SmsTrigger t, string why)
         {
@@ -217,6 +244,8 @@ namespace LocoTester
                         v.Fade = t.Command == CmdKind.StartLoop ? 0.3f : 1f;
                         p.Current = v;
                         p.LastFile = f;
+                        // engine = loops the sim starts by itself (Initial / Variable triggers), not horns, sanders ...
+                        p.IsEngine = t.Command == CmdKind.StartLoop && t.Kind != TrigKind.Discrete;
                     }
                     p.LastEvent = why;
                     if (Log != null) Log(why + " → " + f);
@@ -227,7 +256,7 @@ namespace LocoTester
                 case CmdKind.ReleaseLoopReleaseWithJump:
                     // stop looping and let the sound play to its end (the tail after the cue loop, or
                     // the rest of the file) instead of cutting it off
-                    if (p.Current != null) p.Current.Release();
+                    if (p.Current != null) p.Current.Release(t.Command == CmdKind.ReleaseLoopReleaseWithJump);
                     p.LastEvent = why + " (release)";
                     break;
                 case CmdKind.SetStreamVolume:

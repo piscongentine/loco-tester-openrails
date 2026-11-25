@@ -258,17 +258,20 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="ListBoxItem">
-            <Border x:Name="b" Margin="0,0,0,6" CornerRadius="12" Padding="12,10" Background="#101A2B" BorderBrush="#1A2740" BorderThickness="1">
-              <ContentPresenter/>
-            </Border>
+            <Grid Margin="0,1">
+              <Border x:Name="b" CornerRadius="8" Padding="10,8,10,8" Background="Transparent">
+                <ContentPresenter/>
+              </Border>
+              <!-- selected marker: a slim accent bar on the left -->
+              <Border x:Name="bar" Width="3" CornerRadius="2" HorizontalAlignment="Left" Margin="0,9" Background="#F7811E" Visibility="Collapsed"/>
+            </Grid>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="b" Property="Background" Value="#14213A"/>
-                <Setter TargetName="b" Property="BorderBrush" Value="#2C4064"/>
+                <Setter TargetName="b" Property="Background" Value="#121D31"/>
               </Trigger>
               <Trigger Property="IsSelected" Value="True">
-                <Setter TargetName="b" Property="Background" Value="#1D2D49"/>
-                <Setter TargetName="b" Property="BorderBrush" Value="#F7811E"/>
+                <Setter TargetName="b" Property="Background" Value="#18253D"/>
+                <Setter TargetName="bar" Property="Visibility" Value="Visible"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -346,26 +349,46 @@
           </WrapPanel>
           <TextBlock x:Name="ListCount" Grid.Row="2" Foreground="#5D6F8F" FontSize="11.5" Margin="2,4,0,8"/>
           <ListBox x:Name="LocoList" Grid.Row="3" Background="Transparent" BorderThickness="0" ItemContainerStyle="{StaticResource LocoItem}"
-                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"
+                   VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.ScrollUnit="Pixel">
+            <!-- grouped by type (Electric / Diesel / Steam), one clean line-pair per loco -->
+            <ListBox.GroupStyle>
+              <GroupStyle>
+                <GroupStyle.HeaderTemplate>
+                  <DataTemplate>
+                    <Grid Margin="2,12,4,6">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Text="{Binding Name}" FontSize="10.5" FontWeight="Bold" Foreground="#8C9DBA"/>
+                      <Border Grid.Column="1" Height="1" Background="#1A2740" Margin="10,0" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="2" Text="{Binding ItemCount}" FontSize="10.5" Foreground="#5D6F8F"/>
+                    </Grid>
+                  </DataTemplate>
+                </GroupStyle.HeaderTemplate>
+              </GroupStyle>
+            </ListBox.GroupStyle>
             <ListBox.ItemTemplate>
               <DataTemplate>
-                <Grid>
+                <Grid ToolTip="{Binding Tip}">
                   <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                   </Grid.ColumnDefinitions>
-                  <StackPanel>
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13.5" TextTrimming="CharacterEllipsis" Foreground="#E6EDF7"/>
-                    <TextBlock Text="{Binding Folder}" FontSize="11.5" Foreground="#7385A6" TextTrimming="CharacterEllipsis" Margin="0,2,0,6"/>
-                    <StackPanel Orientation="Horizontal">
-                      <Border CornerRadius="6" Padding="7,1" Background="{Binding TypeBrush}">
-                        <TextBlock Text="{Binding Type}" FontSize="10.5" FontWeight="SemiBold" Foreground="#0A111D"/>
-                      </Border>
-                      <TextBlock Text="{Binding Extra}" FontSize="11" Foreground="#7385A6" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                    </StackPanel>
+                  <!-- type badge -->
+                  <Border Width="30" Height="30" CornerRadius="8" Background="{Binding BadgeBack}" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Badge}" FontSize="12" FontWeight="Bold" Foreground="{Binding TypeBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+                  <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" Foreground="#E6EDF7"/>
+                    <TextBlock Text="{Binding Sub}" FontSize="11" Foreground="#6F82A3" TextTrimming="CharacterEllipsis" Margin="0,1,0,0"/>
                   </StackPanel>
-                  <StackPanel Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right" Orientation="Horizontal" ToolTip="{Binding HealthText}">
-                    <Ellipse Width="9" Height="9" Fill="{Binding HealthBrush}" VerticalAlignment="Center"/>
+                  <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <TextBlock Text="{Binding SpeedText}" FontSize="11" Foreground="#8C9DBA" HorizontalAlignment="Right"/>
+                    <Ellipse Width="7" Height="7" Fill="{Binding HealthBrush}" HorizontalAlignment="Right" Margin="0,5,1,0" ToolTip="{Binding HealthText}"/>
                   </StackPanel>
                 </Grid>
               </DataTemplate>
@@ -396,6 +419,7 @@
           <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
             <Button x:Name="OpenFolderBtn" Content="📁  Folder" Margin="0,0,8,0" ToolTip="Open the loco folder in Explorer"/>
             <Button x:Name="OpenEngBtn" Content="📝  .eng" Margin="0,0,8,0" ToolTip="Open the .eng in Notepad"/>
+            <Button x:Name="SwapBtn" Content="🔁  Replace sounds" Margin="0,0,8,0" ToolTip="Replace this loco's horn, bell or sander with your own .wav (the original is kept)"/>
             <Button x:Name="RepairBtn" Style="{StaticResource Primary}" Content="🛠  Repair sounds" ToolTip="Back up, then fix sound problems automatically"/>
           </StackPanel>
         </Grid>
@@ -671,7 +695,7 @@
               <TextBlock x:Name="ThrottleText" Grid.Column="5" Text="0 %" Width="52" TextAlignment="Right" VerticalAlignment="Center" Margin="8,0,16,0" FontWeight="SemiBold"/>
               <StackPanel Grid.Column="6" Orientation="Horizontal">
                 <Button x:Name="RunBtn" Style="{StaticResource Primary}" Content="▶  Run 0 → 100" Padding="16,8" ToolTip="Accelerate to 100 km/h (or top speed), then brake to a stop (R)"/>
-                <Button x:Name="StopBtn" Content="■  Stop" Margin="8,0,0,0" Padding="14,8" ToolTip="Stop the run and all sounds (Esc)"/>
+                <Button x:Name="StopBtn" Content="■  Stop" Margin="8,0,0,0" Padding="14,8" ToolTip="Stop the loco and shut the engine down (Esc)"/>
               </StackPanel>
             </Grid>
           </Grid>
@@ -685,6 +709,18 @@
         <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="#7385A6" FontSize="11.5"/>
         <TextBlock x:Name="StatusRight" VerticalAlignment="Center" HorizontalAlignment="Right" Foreground="#5D6F8F" FontSize="11.5"/>
       </Grid>
+    </Border>
+
+    <!-- ===== pop-up message (e.g. "Power is off") ===== -->
+    <Border x:Name="Toast" Grid.RowSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" Visibility="Collapsed"
+            Background="#F2101A2B" BorderBrush="#F7811E" BorderThickness="1.5" CornerRadius="14" Padding="26,18" MinWidth="320">
+      <Border.Effect>
+        <DropShadowEffect BlurRadius="30" ShadowDepth="0" Opacity="0.6" Color="#000000"/>
+      </Border.Effect>
+      <StackPanel>
+        <TextBlock x:Name="ToastTitle" FontSize="17" FontWeight="Bold" HorizontalAlignment="Center"/>
+        <TextBlock x:Name="ToastText" FontSize="12.5" Foreground="#AEBBD2" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="380" Margin="0,6,0,0"/>
+      </StackPanel>
     </Border>
   </Grid>
 </Window>

@@ -74,6 +74,27 @@ namespace LocoTester
                 return string.Join("  ·  ", p.ToArray());
             }
         }
+        // clean list row: badge (E / D / S), name, folder, top speed, health dot; grouped by Group
+        public string Group
+        {
+            get
+            {
+                string t = (Loco.EngineType ?? "").ToLowerInvariant();
+                return t.Contains("electric") ? "ELECTRIC" : t.Contains("diesel") ? "DIESEL" : t.Contains("steam") ? "STEAM" : "OTHER";
+            }
+        }
+        public string Badge { get { string g = Group; return g == "OTHER" ? "?" : g.Substring(0, 1); } }
+        public Brush BadgeBack
+        {
+            get
+            {
+                Color c = ((SolidColorBrush)Theme.TypeBrush(Loco.EngineType)).Color;
+                SolidColorBrush b = new SolidColorBrush(Color.FromArgb(0x26, c.R, c.G, c.B)); b.Freeze(); return b;
+            }
+        }
+        public string Sub { get { return Loco.FolderName; } }
+        public string SpeedText { get { return Loco.MaxSpeedMps > 0 ? Math.Round(Loco.MaxSpeedMps * 3.6) + " km/h" : ""; } }
+        public string Tip { get { return Loco.DisplayName + "\n" + Folder + (Extra.Length > 0 ? "\n" + Extra : ""); } }
         public Brush HealthBrush { get { return Errors < 0 ? Theme.B("#3A4A66") : Errors > 0 ? Theme.Red : Warnings > 0 ? Theme.Amber : Theme.Green; } }
         public string HealthText { get { return Errors < 0 ? "Checking…" : Errors > 0 ? Errors + " problem(s) — open Overview" : Warnings > 0 ? Warnings + " warning(s)" : "All good"; } }
         public event PropertyChangedEventHandler PropertyChanged;
@@ -154,7 +175,10 @@ namespace LocoTester
         double throttle;         // 0..1
         double brake;            // 0..1
         double rpm;              // 0..1, follows the throttle like a diesel revving up / down
-        bool brakeHeld, panto1, panto2, wipers, doors, mirrors, cabLight, power = true, hornHeld, emergency, dynHeld, coupled;
+        bool brakeHeld, panto1, panto2, wipers, doors, mirrors, cabLight, power, hornHeld, sanderHeld, emergency, dynHeld, coupled;
+        // engine power: off when a loco is chosen; Power starts the engine (cranking, then idle), Stop / Power shut it down
+        bool simReady, startPending, starting, shuttingDown;
+        DispatcherTimer toastTimer;
         int reverser = 1;        // 1 forward, 0 neutral, -1 reverse
         int lastDir = 1;
         double dyn;              // dynamic brake 0..1
@@ -183,6 +207,9 @@ namespace LocoTester
             ListBox list = (ListBox)F("LocoList");
             view = CollectionViewSource.GetDefaultView(items);
             view.Filter = Filter;
+            view.SortDescriptions.Add(new SortDescription("Group", ListSortDirection.Ascending));
+            view.SortDescriptions.Add(new SortDescription("Name", ListSortDirection.Ascending));
+            view.GroupDescriptions.Add(new PropertyGroupDescription("Group"));
             list.ItemsSource = view;
             list.SelectionChanged += delegate { LocoItem it = list.SelectedItem as LocoItem; if (it != null && it != current) Select(it); };
             ((ItemsControl)F("StreamList")).ItemsSource = streamRows;
@@ -199,6 +226,7 @@ namespace LocoTester
             Btn("OpenFolderBtn").Click += delegate { if (current != null) Process.Start("explorer.exe", "/select,\"" + current.Loco.EngPath + "\""); };
             Btn("OpenEngBtn").Click += delegate { if (current != null) Process.Start("notepad.exe", "\"" + current.Loco.EngPath + "\""); };
             Btn("RepairBtn").Click += delegate { Repair(); };
+            Btn("SwapBtn").Click += delegate { OpenSwap(); };
             Btn("SysCheckBtn").Click += delegate { RunSysCheck(); };
 
             foreach (string t in new[] { "TabOverview", "Tab3D", "TabCab", "TabSound", "TabAbout" }) ((RadioButton)F(t)).Checked += delegate { ShowPage(); };
@@ -217,6 +245,7 @@ namespace LocoTester
 
             foreach (string c in new[] { "CabFront", "CabLeft", "CabRight", "CabRear" }) ((RadioButton)F(c)).Checked += delegate { CabViewChanged(); };
             OnToggle("CabNightTgl", delegate { ShowCabImage(); });
+            Tgl("CabLightTgl").PreviewMouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e) { if (current != null && !NeedPower()) e.Handled = true; };
             Tgl("CabLightTgl").Click += delegate { SetCabLight(Tgl("CabLightTgl").IsChecked == true); };
             OnToggle("CabHotTgl", delegate { BuildHotspots(); });
 
@@ -229,11 +258,17 @@ namespace LocoTester
             vol.ValueChanged += delegate { audio.MasterVolume = (float)vol.Value; settings.Volume = vol.Value; };
 
             Slider sp = (Slider)F("SpeedSlider");
-            sp.ValueChanged += delegate { if (!sliderLock) { runPhase = 0; } };
+            sp.ValueChanged += delegate
+            {
+                if (sliderLock) return;
+                if (!power && sp.Value > 0 && current != null) { sliderLock = true; sp.Value = 0; sliderLock = false; NeedPower(); return; }
+                runPhase = 0;
+            };
             Slider th = (Slider)F("ThrottleSlider");
             th.ValueChanged += delegate
             {
                 if (sliderLock) return;
+                if (!power && th.Value > 0 && current != null) { sliderLock = true; th.Value = 0; sliderLock = false; NeedPower(); return; }
                 double old = throttle; throttle = th.Value / 100.0;
                 if (Math.Abs(old - throttle) > 0.04 && sim != null) sim.Fire(TriggerNames.ThrottleChange);
                 manualVars = false;
@@ -259,12 +294,13 @@ namespace LocoTester
 
             // command line: [folder] [--page=overview|3d|cab|sound|about] [--throttle=0-100]
             bool runCheck = false;
-            string start = null, page = null, startCam = null; double startThrottle = -1, startSpeed = 0; bool startNight = false, startPanto = false, startReverse = false; int startLights = 0;
+            string start = null, page = null, startCam = null; double startThrottle = -1, startSpeed = 0; bool startNight = false, startPanto = false, startReverse = false, startPower = false; int startLights = 0;
             foreach (string a in args)
             {
                 if (a.StartsWith("--page=")) page = a.Substring(7).ToLowerInvariant();
                 else if (a.StartsWith("--throttle=")) startThrottle = Stf.ParseNumber(a.Substring(11), -1);
                 else if (a == "--night") startNight = true;
+                else if (a == "--power") startPower = true;
                 else if (a == "--syscheck") { page = "about"; runCheck = true; }
                 else if (a == "--panto") startPanto = true;
                 else if (a.StartsWith("--lights=")) startLights = (int)Stf.ParseNumber(a.Substring(9), 0);
@@ -291,14 +327,16 @@ namespace LocoTester
                 int pi = page != null ? Array.IndexOf(names, page) : -1;
                 if (pi >= 0) ((RadioButton)F(tabs[pi])).IsChecked = true;
                 if (runCheck) RunSysCheck();
-                if (startThrottle >= 0) w.Dispatcher.BeginInvoke(new Action(delegate { ((Slider)F("ThrottleSlider")).Value = startThrottle; }), DispatcherPriority.ApplicationIdle);
-                // test / shortcut options: --night --panto --lights=1|2 --speed=kmh --reverse --camera=front|side|rear|top|pov
+                // test / shortcut options: --power --night --panto --lights=1|2 --speed=kmh --throttle=% --reverse --camera=front|side|rear|top|pov
+                // (anything that drives the loco switches the power on first)
                 DispatcherTimer once = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
                 once.Tick += delegate
                 {
                     once.Stop();
                     if (current == null) return;
                     if (startNight) Tgl("NightTgl").IsChecked = true;
+                    if ((startPower || startReverse || startPanto || startLights > 0 || startSpeed > 0 || startThrottle >= 0) && !power) DeckDown("power");
+                    if (startThrottle >= 0) ((Slider)F("ThrottleSlider")).Value = startThrottle;
                     if (startReverse) DeckDown("reverser");
                     if (startReverse) DeckDown("reverser");
                     if (startPanto) DeckDown("panto1");
@@ -442,20 +480,23 @@ namespace LocoTester
             cabView = 0;
             ((RadioButton)F("CabFront")).IsChecked = true;
             ((RadioButton)F("CabRear")).IsEnabled = l.CabViewPath(1) != null;
+            UpdateCabLightAvailability();
             StartSound(IsTab("TabCab") || ((RadioButton)F("EarCab")).IsChecked == true);
             LoadModel(l);
             if (IsTab("TabCab")) CabViewChanged();
+            Status("Engine is off. Press ⏻ Power (O) to start it.");
         }
 
         void ResetControls()
         {
             speed = 0; throttle = 0; brake = 0; rpm = 0; dyn = 0; brakeHeld = false; runPhase = 0; emergency = false; dynHeld = false; coupled = false; reverser = 1; lastDir = 1;
-            panto1 = panto2 = wipers = doors = mirrors = cabLight = false; headlight = 0; power = true;
+            panto1 = panto2 = wipers = doors = mirrors = cabLight = false; headlight = 0; power = false; hornHeld = false; sanderHeld = false;
+            startPending = starting = shuttingDown = false;
             anim.Panto1 = anim.Panto2 = anim.Wiper = anim.Doors = anim.Mirrors = 0; anim.WheelAngle = 0;
             sliderLock = true;
             ((Slider)F("SpeedSlider")).Value = 0; ((Slider)F("ThrottleSlider")).Value = 0;
             sliderLock = false;
-            foreach (DeckSpec d in deck) { ToggleButton tb = d.Button as ToggleButton; if (tb != null) tb.IsChecked = d.Id == "power"; }
+            foreach (DeckSpec d in deck) { ToggleButton tb = d.Button as ToggleButton; if (tb != null) tb.IsChecked = false; }
             UpdateDeckLabels();
             Tgl("CabLightTgl").IsChecked = false;
         }
@@ -539,6 +580,22 @@ namespace LocoTester
                 Txt("RepairReport").Text = "REPAIR REPORT\n" + string.Join("\n", r.Actions.ToArray()) + "\n\nErrors: " + r.ErrorsBefore + " → " + r.ErrorsAfter;
                 Status("Repair finished: errors " + r.ErrorsBefore + " → " + r.ErrorsAfter);
             }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        void OpenSwap()
+        {
+            if (current == null) { Status("Choose a locomotive first"); return; }
+            SwapWindow sw;
+            try { sw = new SwapWindow(w, current.Loco, orRoot, audio); sw.ShowDialog(); }
+            catch (Exception ex) { Status("Replace sounds failed: " + ex.Message); Log("Replace sounds failed: " + ex); return; }
+            if (!sw.Changed) return;
+            // reload the sound files; keep the engine running if it was
+            bool wasOn = power;
+            StartSound(simCab);
+            if (wasOn) { power = true; SetToggle("power", true); }
+            Doctor.ForgetHealth(current.Loco);
+            Log("Sounds changed: reloaded " + System.IO.Path.GetFileName(current.Loco.SmsPath(simCab) ?? ""));
+            Status("Sounds changed. Try them with the Horn / Bell / Sander buttons.");
         }
 
         // ---------------------------------------------------------------- pages
@@ -635,8 +692,40 @@ namespace LocoTester
                 (cabLight && !hasLight ? "  ⚠ cab light has no CABLIGHT image, so it shows no change in game" : "");
         }
 
+        bool hasCabLight;
+
+        /// <summary>Checks the loco's cab views (front and rear) for CABLIGHT images. Without them the cab light
+        /// would show no change in Open Rails, so the Cab light buttons are greyed out.</summary>
+        void UpdateCabLightAvailability()
+        {
+            hasCabLight = false;
+            if (current != null)
+                for (int i = 0; i < Math.Max(1, current.Loco.CabViews.Count); i++)
+                {
+                    string p = current.Loco.CabViewPath(i);
+                    if (p == null) continue;
+                    CabFile c = CabFile.Load(p);
+                    if (c.HasAnyCabLight()) { hasCabLight = true; break; }
+                }
+            string tip = hasCabLight ? "Cab light: turns the lit cab on and off  (C)" : "This cab has no cab light (no CABLIGHT images in its cab view folder)";
+            foreach (DeckSpec d in deck)
+                if (d.Id == "cablight")
+                {
+                    d.Button.IsEnabled = hasCabLight;
+                    d.Button.ToolTip = tip;
+                    ToolTipService.SetShowOnDisabled(d.Button, true);
+                    d.LabelText.Text = hasCabLight ? "Cab light" : "No cab light";
+                }
+            ToggleButton t = Tgl("CabLightTgl");
+            t.IsEnabled = hasCabLight;
+            t.ToolTip = tip;
+            ToolTipService.SetShowOnDisabled(t, true);
+            if (!hasCabLight && cabLight) SetCabLight(false);
+        }
+
         void SetCabLight(bool on)
         {
+            if (on && !hasCabLight) { Toast("No cab light", "This loco's cab has no CABLIGHT images, so the cab light shows no change."); on = false; }
             cabLight = on;
             Tgl("CabLightTgl").IsChecked = on;
             foreach (DeckSpec d in deck) if (d.Id == "cablight") ((ToggleButton)d.Button).IsChecked = on;
@@ -704,6 +793,7 @@ namespace LocoTester
             if (sim != null) sim.Stop();
             audio.StopAll();
             sim = null;
+            simReady = false;
             simCab = cabEar;
             streamRows.Clear();
             WrapPanel tp = (WrapPanel)F("TriggerPanel");
@@ -733,7 +823,7 @@ namespace LocoTester
             {
                 int num = n;
                 Button b = new Button { Content = num + "  ·  " + TriggerNames.Name(num), Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(10, 5, 10, 5), FontSize = 12 };
-                b.Click += delegate { int k = sim != null ? sim.Fire(num) : 0; if (k == 0) Log("Trigger " + num + ": no stream reacted"); };
+                b.Click += delegate { if (!NeedPower()) return; int k = sim != null ? sim.Fire(num) : 0; if (k == 0) Log("Trigger " + num + ": no stream reacted"); };
                 tp.Children.Add(b);
             }
             UpdateDeckAvailability();
@@ -743,8 +833,105 @@ namespace LocoTester
             if (g != null) foreach (SmsStream st in g.Streams) foreach (string wf in st.AllFiles()) { string wp = f.ResolveWav(wf, orRoot); if (wp != null && !paths.Contains(wp)) paths.Add(wp); }
             Task.Factory.StartNew(delegate { Parallel.ForEach(paths, delegate(string wp) { WavData.Get(wp); }); }).ContinueWith(delegate
             {
-                if (sim == mine) { sim.Start(StateNow()); Log("Sound ready: " + paths.Count + " sound files"); }
+                if (sim != mine) return;
+                simReady = true;
+                Log("Sound ready: " + paths.Count + " sound files");
+                if (startPending) BeginStartup();                                  // Power was pressed while loading
+                else if (power && !shuttingDown) { sim.Spool = 1; sim.Start(StateNow()); }   // ear switched while running
+                startPending = false;
             }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        // ---------------------------------------------------------------- engine power
+
+        void PowerOn()
+        {
+            if (current == null) return;
+            power = true; SetToggle("power", true);
+            Log("Power ON: starting engine");
+            Status("Starting engine…");
+            if (sim == null) { startPending = true; StartSound(simCab); return; }
+            if (!simReady) { startPending = true; return; }
+            BeginStartup();
+        }
+
+        void BeginStartup()
+        {
+            if (sim == null) return;
+            shuttingDown = false;
+            if (sim.Running) sim.Stop();
+            audio.StopAll();
+            sim.Spool = 0;
+            starting = true;
+            sim.Start(StateNow());
+            // the loco's own start-up sounds, if its .sms has them (circuit breaker, power on)
+            Fire(TriggerNames.CircuitBreakerClosing, TriggerNames.CircuitBreakerClosed, TriggerNames.EnginePowerOn);
+        }
+
+        void PowerOff()
+        {
+            if (!power && !starting) return;
+            StopRun();
+            if (hornHeld) DeckUp("horn");
+            if (sanderHeld) DeckUp("sander");
+            if (brakeHeld) DeckUp("brake");
+            if (dynHeld) DeckUp("dynbrake");
+            throttle = 0;
+            sliderLock = true; ((Slider)F("ThrottleSlider")).Value = 0; sliderLock = false;
+            Fire(TriggerNames.CircuitBreakerOpen, TriggerNames.EnginePowerOff);
+            power = false; SetToggle("power", false);
+            startPending = false; starting = false;
+            shuttingDown = sim != null && sim.Running;
+            Log("Power OFF: engine shutting down");
+            Status(shuttingDown ? "Engine shutting down…" : "Engine is off");
+        }
+
+        /// <summary>True when the engine has power; otherwise shows "Power is off" and returns false.</summary>
+        bool NeedPower()
+        {
+            if (power) return true;
+            Toast("⏻  Power is off", "Start the engine with the Power button (key O) first.");
+            return false;
+        }
+
+        void Toast(string title, string text)
+        {
+            Txt("ToastTitle").Text = title;
+            Txt("ToastText").Text = text;
+            Border t = (Border)F("Toast");
+            t.Visibility = Visibility.Visible;
+            t.BeginAnimation(UIElement.OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(140)));
+            if (toastTimer == null)
+            {
+                toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.8) };
+                toastTimer.Tick += delegate
+                {
+                    toastTimer.Stop();
+                    System.Windows.Media.Animation.DoubleAnimation a = new System.Windows.Media.Animation.DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(250));
+                    a.Completed += delegate { if (!toastTimer.IsEnabled) t.Visibility = Visibility.Collapsed; };
+                    t.BeginAnimation(UIElement.OpacityProperty, a);
+                };
+            }
+            toastTimer.Stop(); toastTimer.Start();
+        }
+
+        /// <summary>Called every frame: start-up (crank ~1.6 s, then rise to idle by ~4.5 s) and run-down (~3 s).</summary>
+        void SpoolEngine(double dt)
+        {
+            if (sim == null || !sim.Running) return;
+            sim.SinceStart += dt;
+            if (starting)
+            {
+                double t = sim.SinceStart;
+                if (t < 1.6) sim.Spool = 0.12 + 0.1 * t;
+                else { double x = Math.Min(1, (t - 1.6) / 2.9); sim.Spool = 0.28 + 0.72 * x * x * (3 - 2 * x); }
+                if (sim.Spool >= 0.999) { sim.Spool = 1; starting = false; Log("Engine running"); Status("Engine running"); }
+            }
+            else if (shuttingDown)
+            {
+                sim.Spool = Math.Max(0, sim.Spool - dt / 3.0);
+                if (sim.Spool <= 0.001) { sim.Stop(); audio.StopAll(); shuttingDown = false; Log("Engine stopped"); Status("Engine stopped"); }
+            }
         }
 
         SimState StateNow()
@@ -783,7 +970,7 @@ namespace LocoTester
             AddDeck("headlight", "💡", "Lights: Off", "L", false, false);
             AddDeck("cablight", "🔦", "Cab light", "C", false, true);
             AddDeck("wipers", "🌧", "Wipers", "W", false, true, TriggerNames.WiperOn);
-            AddDeck("sander", "⏬", "Sander", "S", false, true, TriggerNames.SanderOn);
+            AddDeck("sander", "⏬", "Sander", "S", true, false, TriggerNames.SanderOn);
             AddDeck("compressor", "🌀", "Compressor", "K", false, true, TriggerNames.CompressorOn);
             AddDeck("brake", "🛑", "Brake", "Space", true, false, TriggerNames.TrainBrakePressureIncrease, TriggerNames.EngineBrakePressureIncrease, 53, TriggerNames.TrainBrakePressureDecrease);
             AddDeck("doors", "🚪", "Doors", "D", false, true, TriggerNames.DoorOpen);
@@ -816,6 +1003,8 @@ namespace LocoTester
             b.Content = sp;
             b.ToolTip = label + "  (" + key + ")" + (hold ? " — hold" : "");
             d.Button = b;
+            // no power: show the message and swallow the press (so toggles do not flip and holds do not start)
+            b.PreviewMouseLeftButtonDown += delegate(object s, MouseButtonEventArgs e) { if (id != "power" && current != null && !NeedPower()) e.Handled = true; };
             if (hold)
             {
                 b.PreviewMouseLeftButtonDown += delegate { DeckDown(id); };
@@ -847,7 +1036,7 @@ namespace LocoTester
         {
             foreach (DeckSpec d in deck)
             {
-                if (d.Triggers.Length == 0) { d.Button.Opacity = 1; continue; }
+                if (d.Triggers.Length == 0 || d.Id == "power") { d.Button.Opacity = 1; continue; }   // power always works (it starts the engine)
                 bool has = false;
                 if (sim != null) foreach (int t in d.Triggers) if (sim.Has(t)) has = true;
                 d.Button.Opacity = has ? 1 : 0.45;
@@ -865,12 +1054,13 @@ namespace LocoTester
             }
         }
 
-        static bool IsHold(string id) { return id == "horn" || id == "bell" || id == "brake" || id == "alerter" || id == "dynbrake"; }
+        static bool IsHold(string id) { return id == "horn" || id == "bell" || id == "sander" || id == "brake" || id == "alerter" || id == "dynbrake"; }
 
         void SetToggle(string id, bool on) { foreach (DeckSpec d in deck) if (d.Id == id) { ToggleButton tb = d.Button as ToggleButton; if (tb != null) tb.IsChecked = on; } }
 
         void DeckDown(string id)
         {
+            if (id != "power" && !NeedPower()) return;
             switch (id)
             {
                 case "horn": hornHeld = true; Fire(TriggerNames.HornOn); Log("Horn ON"); break;
@@ -884,14 +1074,13 @@ namespace LocoTester
                 case "headlight": headlight = (headlight + 1) % 3; Fire(TriggerNames.LightSwitchToggle); UpdateDeckLabels(); Log("Headlights " + (headlight == 0 ? "OFF" : headlight == 1 ? "DIM" : "BRIGHT")); break;
                 case "cablight": SetCabLight(!cabLight); break;
                 case "wipers": wipers = !wipers; SetToggle("wipers", wipers); Fire(wipers ? TriggerNames.WiperOn : TriggerNames.WiperOff); Log("Wipers " + (wipers ? "ON" : "OFF")); break;
-                case "sander": { bool on = IsOn("sander", true); Fire(on ? TriggerNames.SanderOn : TriggerNames.SanderOff); Log("Sander " + (on ? "ON" : "OFF")); break; }
+                case "sander": if (!sanderHeld) { sanderHeld = true; Fire(TriggerNames.SanderOn); Log("Sander ON"); } break;
                 case "compressor": { bool on = IsOn("compressor", true); Fire(on ? TriggerNames.CompressorOn : TriggerNames.CompressorOff); Log("Compressor " + (on ? "ON" : "OFF")); break; }
                 case "doors": doors = !doors; SetToggle("doors", doors); Fire(doors ? TriggerNames.DoorOpen : TriggerNames.DoorClose); Log("Doors " + (doors ? "OPEN" : "CLOSED")); break;
                 case "mirrors": mirrors = !mirrors; SetToggle("mirrors", mirrors); Log("Mirrors " + (mirrors ? "OUT" : "IN")); break;
                 case "power":
-                    power = !power; SetToggle("power", power);
-                    if (power) Fire(TriggerNames.CircuitBreakerClosing, TriggerNames.CircuitBreakerClosed, TriggerNames.EnginePowerOn); else Fire(TriggerNames.CircuitBreakerOpen, TriggerNames.EnginePowerOff);
-                    Log("Power " + (power ? "ON" : "OFF"));
+                    if (power) PowerOff(); else PowerOn();
+                    SetToggle("power", power);
                     break;
                 case "radio": Fire(TriggerNames.CabRadioOn); Log("Cab radio"); break;
                 case "emergency":
@@ -924,10 +1113,12 @@ namespace LocoTester
 
         void DeckUp(string id)
         {
+            if (!power) return;
             switch (id)
             {
-                case "horn": hornHeld = false; Fire(TriggerNames.HornOff); break;
-                case "bell": Fire(TriggerNames.BellOff); break;
+                case "horn": hornHeld = false; Fire(TriggerNames.HornOff); Log("Horn OFF"); break;
+                case "bell": Fire(TriggerNames.BellOff); Log("Bell OFF"); break;
+                case "sander": if (sanderHeld) { sanderHeld = false; Fire(TriggerNames.SanderOff); Log("Sander OFF"); } break;
                 case "brake": if (brakeHeld) { brakeHeld = false; Fire(TriggerNames.TrainBrakePressureDecrease, TriggerNames.EngineBrakePressureDecrease); Log("Brake RELEASED"); } break;
                 case "dynbrake": if (dynHeld) { dynHeld = false; Fire(3); Log("Dynamic brake OFF"); } break;
             }
@@ -935,6 +1126,7 @@ namespace LocoTester
 
         void SetThrottle(double v)
         {
+            if (!NeedPower()) return;
             throttle = Math.Max(0, Math.Min(1, v));
             sliderLock = true; ((Slider)F("ThrottleSlider")).Value = throttle * 100; sliderLock = false;
             Fire(TriggerNames.ThrottleChange);
@@ -944,8 +1136,7 @@ namespace LocoTester
 
         void StartRun()
         {
-            if (current == null) return;
-            if (!power) DeckDown("power");
+            if (current == null || !NeedPower()) return;
             if (emergency) DeckDown("emergency");
             if (reverser != 1) { reverser = 1; UpdateDeckLabels(); }
             runTarget = 100 / 3.6;
@@ -963,9 +1154,9 @@ namespace LocoTester
             StopRun();
             speed = 0; throttle = 0; brake = 0;
             sliderLock = true; ((Slider)F("SpeedSlider")).Value = 0; ((Slider)F("ThrottleSlider")).Value = 0; sliderLock = false;
-            audio.StopAll();
-            if (current != null) StartSound(simCab);
-            Status("Stopped");
+            // Stop = stop the loco and shut the engine down (it runs down instead of cutting off)
+            if (power || starting) PowerOff();
+            else Status("Engine is off");
         }
 
         // ---------------------------------------------------------------- frame loop
@@ -1043,6 +1234,7 @@ namespace LocoTester
             if (IsTab("TabCab")) DrawCabWipers(t);
 
             // sound (30 Hz)
+            SpoolEngine(dt);
             simAccum += dt;
             if (simAccum >= 0.033 && sim != null) { simAccum = 0; sim.Update(StateNow()); }
 
@@ -1178,14 +1370,15 @@ namespace LocoTester
             if (k == Key.R) { StartRun(); e.Handled = true; return; }
             if (k == Key.Up) { SetThrottle(throttle + 0.1); e.Handled = true; return; }
             if (k == Key.Down) { SetThrottle(throttle - 0.1); e.Handled = true; return; }
-            if (k == Key.PageUp) { ((Slider)F("SpeedSlider")).Value += 10; e.Handled = true; return; }
-            if (k == Key.PageDown) { ((Slider)F("SpeedSlider")).Value -= 10; e.Handled = true; return; }
+            if (k == Key.PageUp) { if (NeedPower()) ((Slider)F("SpeedSlider")).Value += 10; e.Handled = true; return; }
+            if (k == Key.PageDown) { if (NeedPower()) ((Slider)F("SpeedSlider")).Value -= 10; e.Handled = true; return; }
             if (k >= Key.D1 && k <= Key.D5) { string[] tabs = { "TabOverview", "Tab3D", "TabCab", "TabSound", "TabAbout" }; ((RadioButton)F(tabs[k - Key.D1])).IsChecked = true; e.Handled = true; return; }
             if (k == Key.P) { DeckDown(Keyboard.Modifiers == ModifierKeys.Shift ? "panto2" : "panto1"); e.Handled = true; return; }
             string id;
             if (keyMap.TryGetValue(k, out id))
             {
                 e.Handled = true;
+                if (id != "power" && !power) { if (!e.IsRepeat) NeedPower(); return; }
                 if (IsHold(id)) { if (held.Add(k)) DeckDown(id); }
                 else if (!e.IsRepeat)
                 {
@@ -1214,13 +1407,17 @@ namespace LocoTester
             "•  2D cab with day, night and cab-light images; click horn, bell, sander, wipers, pantograph, brake and more right on the cab\n" +
             "•  Sound Lab: plays the .sms the way Open Rails does (cue-point loops, speed and engine curves, every trigger as a button) with live meters and an event log\n" +
             "•  Tests: horn, bell, pantographs, lights, wipers, sander, compressor, brake, emergency brake, dynamic brake, reverser, doors, mirrors, coupling, power, alerter, radio, steam controls\n" +
+            "•  Power: the engine starts (cranking, then idle) when you press Power and runs down when you press Stop; every control asks for power first\n" +
+            "•  Horn, bell and sander play like MSTS: the sound sustains while you hold the button and plays its ending (or fades out) when you let go\n" +
+            "•  Replace sounds: swap a loco's horn, bell or sander for your own .wav in a few clicks, with the original kept and one-click restore\n" +
+            "•  Cab light check: the Cab light button works only on cabs that have lit (CABLIGHT) images, and is greyed out on the rest\n" +
             "•  Run 0 → 100 km/h: accelerates, cruises and brakes to a stop while you listen to every sound stage\n" +
             "•  'Check this PC': requirements, graphics card and driver, sound, Open Rails folders and DB Tracks";
         const string Keys =
-            "H horn (hold)   B bell (hold)   Space brake (hold)   A alerter\n" +
-            "P / Shift+P pantograph 1 / 2   L headlights   C cab light   W wipers\n" +
-            "E emergency   Y dynamic brake (hold)   V reverser   J couple\n" +
-            "S sander   K compressor   D doors   M mirrors   O power   R run 0→100   Esc stop\n" +
+            "O power (start / stop the engine first)   H horn (hold)   B bell (hold)   S sander (hold)\n" +
+            "Space brake (hold)   A alerter   P / Shift+P pantograph 1 / 2   L headlights   C cab light\n" +
+            "W wipers   E emergency   Y dynamic brake (hold)   V reverser   J couple\n" +
+            "K compressor   D doors   M mirrors   R run 0→100   Esc stop the loco and the engine\n" +
             "↑ ↓ throttle   PgUp PgDn speed   1-5 pages   Ctrl+F search   F5 rescan";
     }
 
