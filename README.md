@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/piscongentine/loco-tester-openrails/releases/latest/download/LocoTester-Setup.exe"><img alt="Download for Windows" src="https://img.shields.io/badge/Download-Windows%20Setup-F7811E?style=for-the-badge&logo=windows&logoColor=white"></a>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.1%20Power%20Up-16233A?style=for-the-badge"></a>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-1.1.1%20Power%20Up-16233A?style=for-the-badge"></a>
   <img alt="Open Rails and MSTS" src="https://img.shields.io/badge/Open%20Rails%20%7C%20MSTS-ready-22C3B0?style=for-the-badge">
   <img alt="Made in Bharat" src="https://img.shields.io/badge/Made%20in-Bharat-FF9933?style=for-the-badge">
 </p>
@@ -22,6 +22,8 @@ a 0 → 100 km/h run, and a health check that repairs broken sound files for you
 </p>
 
 ## 🆕 What's new in 1.1 "Power Up"
+
+> 🔄 **1.1.1:** **About → Check for updates** compares your version with the latest on GitHub. Up to date? It just says so. Newer version out? It opens the download page.
 
 - ⏻ **Engine power**: press Power to start the engine (it cranks, then idles); Stop runs it down. Every control asks for power first.
 - 📯 **Horn, bell and sander like MSTS**: they sustain while held and play their ending when released.
@@ -65,7 +67,7 @@ Full details and a download link for every version: **[Update log](CHANGELOG.md)
 
 ## ⬇️ Install
 
-1. Download **[LocoTester-Setup.exe](https://github.com/piscongentine/loco-tester-openrails/releases/latest/download/LocoTester-Setup.exe)** (about 3 MB). This link always gives the newest version (now 1.1). Older versions are in the [update log](CHANGELOG.md).
+1. Download **[LocoTester-Setup.exe](https://github.com/piscongentine/loco-tester-openrails/releases/latest/download/LocoTester-Setup.exe)** (about 3 MB). This link always gives the newest version (now 1.1.1). Older versions are in the [update log](CHANGELOG.md).
 2. Run it. It installs for your Windows account and needs no administrator rights. Over an older version it simply updates it.
 3. On the last page, tick **Check this PC** to see whether your graphics card, sound and Open Rails folder are ready.
 

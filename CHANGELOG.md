@@ -4,10 +4,24 @@ Every version of Loco Tester, newest first. Each one stays downloadable.
 
 | Version | Released | Download | Release page |
 |---|---|---|---|
-| **1.1 "Power Up"** (latest) | 25 Nov 2026 | [LocoTester-Setup-1.1.exe](https://github.com/piscongentine/loco-tester-openrails/releases/download/v1.1/LocoTester-Setup-1.1.exe) | [v1.1](https://github.com/piscongentine/loco-tester-openrails/releases/tag/v1.1) |
+| **1.1.1 "Power Up"** (latest) | 27 Nov 2026 | [LocoTester-Setup-1.1.1.exe](https://github.com/piscongentine/loco-tester-openrails/releases/download/v1.1.1/LocoTester-Setup-1.1.1.exe) | [v1.1.1](https://github.com/piscongentine/loco-tester-openrails/releases/tag/v1.1.1) |
+| 1.1 "Power Up" | 25 Nov 2026 | [LocoTester-Setup-1.1.exe](https://github.com/piscongentine/loco-tester-openrails/releases/download/v1.1/LocoTester-Setup-1.1.exe) | [v1.1](https://github.com/piscongentine/loco-tester-openrails/releases/tag/v1.1) |
 | 1.0 "First Light" | 24 Nov 2026 | [LocoTester-Setup-1.0.exe](https://github.com/piscongentine/loco-tester-openrails/releases/download/v1.0/LocoTester-Setup-1.0.exe) | [v1.0](https://github.com/piscongentine/loco-tester-openrails/releases/tag/v1.0) |
 
 Always the newest: **[LocoTester-Setup.exe](https://github.com/piscongentine/loco-tester-openrails/releases/latest/download/LocoTester-Setup.exe)**. Setup updates an installed copy in place; your settings are kept.
+
+---
+
+## 1.1.1 "Power Up" · 27 Nov 2026
+
+[⬇️ Download 1.1.1](https://github.com/piscongentine/loco-tester-openrails/releases/download/v1.1.1/LocoTester-Setup-1.1.1.exe) · [Release page](https://github.com/piscongentine/loco-tester-openrails/releases/tag/v1.1.1)
+
+### New: Check for updates
+- **About → ⟳ Check for updates** asks GitHub for the latest version and compares it with yours, number by number.
+- **Already up to date:** it says *"You have the latest version"* in green, and GitHub is **not** opened.
+- **Newer version on GitHub:** it shows both versions and opens the release page, so you can download the new setup.
+- **No internet:** it says GitHub could not be reached; nothing opens.
+- Command line: `--updates` opens About and checks; `--checkupdate [version]` prints the result without opening anything.
 
 ---
 

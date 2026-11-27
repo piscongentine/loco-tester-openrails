@@ -2,7 +2,7 @@
 ; Build: "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" installer\LocoTester.iss   (or run build-setup.ps1)
 
 #define AppName "Loco Tester"
-#define AppVersion "1.1"
+#define AppVersion "1.1.1"
 #define AppVersionName "Power Up"
 #define Publisher "Piscongentine"
 #define RepoUrl "https://github.com/piscongentine/loco-tester-openrails"
@@ -17,7 +17,7 @@ AppPublisherURL={#RepoUrl}
 AppSupportURL={#RepoUrl}/issues
 AppUpdatesURL={#RepoUrl}/releases
 AppCopyright=© 2026 {#Publisher}
-VersionInfoVersion={#AppVersion}.0.0
+VersionInfoVersion={#AppVersion}.0
 VersionInfoCompany={#Publisher}
 VersionInfoDescription={#AppName} Setup
 DefaultDirName={autopf}\{#AppName}

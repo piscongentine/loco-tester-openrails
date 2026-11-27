@@ -9,9 +9,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCompany("Piscongentine")]
 [assembly: AssemblyProduct("Loco Tester")]
 [assembly: AssemblyCopyright("© 2026 Piscongentine")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
-[assembly: AssemblyInformationalVersion("1.1 \"Power Up\"")]
+[assembly: AssemblyVersion("1.1.1.0")]
+[assembly: AssemblyFileVersion("1.1.1.0")]
+[assembly: AssemblyInformationalVersion("1.1.1 \"Power Up\"")]
 [assembly: ComVisible(false)]
 
 namespace LocoTester
@@ -19,7 +19,7 @@ namespace LocoTester
     public static class AppInfo
     {
         public const string Name = "Loco Tester";
-        public const string Version = "1.1";
+        public const string Version = "1.1.1";
         public const string VersionName = "Power Up";
         public const string Author = "Piscongentine";
     }
@@ -31,6 +31,15 @@ namespace LocoTester
         [STAThread]
         public static int Main(string[] args)
         {
+            if (args.Length >= 1 && args[0] == "--checkupdate")
+            {
+                // test hook: --checkupdate [pretend-version]; prints the result, never opens a browser
+                AttachConsole(-1);
+                Updater.Result u = Updater.Check(args.Length > 1 ? args[1] : AppInfo.Version);
+                Console.WriteLine();
+                Console.WriteLine(u.Error ?? (u.Current + " -> GitHub " + u.Latest + (u.Newer ? " : NEWER, would open " + u.Url : " : up to date, browser stays closed")));
+                return u.Error == null ? 0 : 1;
+            }
             if (args.Length >= 1 && args[0] == "--selftest")
             {
                 AttachConsole(-1);

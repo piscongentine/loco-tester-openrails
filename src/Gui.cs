@@ -228,6 +228,7 @@ namespace LocoTester
             Btn("RepairBtn").Click += delegate { Repair(); };
             Btn("SwapBtn").Click += delegate { OpenSwap(); };
             Btn("SysCheckBtn").Click += delegate { RunSysCheck(); };
+            Btn("UpdateBtn").Click += delegate { CheckForUpdates(); };
 
             foreach (string t in new[] { "TabOverview", "Tab3D", "TabCab", "TabSound", "TabAbout" }) ((RadioButton)F(t)).Checked += delegate { ShowPage(); };
 
@@ -293,7 +294,7 @@ namespace LocoTester
             CompositionTarget.Rendering += OnFrame;
 
             // command line: [folder] [--page=overview|3d|cab|sound|about] [--throttle=0-100]
-            bool runCheck = false;
+            bool runCheck = false, runUpdate = false;
             string start = null, page = null, startCam = null; double startThrottle = -1, startSpeed = 0; bool startNight = false, startPanto = false, startReverse = false, startPower = false; int startLights = 0;
             foreach (string a in args)
             {
@@ -302,6 +303,7 @@ namespace LocoTester
                 else if (a == "--night") startNight = true;
                 else if (a == "--power") startPower = true;
                 else if (a == "--syscheck") { page = "about"; runCheck = true; }
+                else if (a == "--updates") { page = "about"; runUpdate = true; }
                 else if (a == "--panto") startPanto = true;
                 else if (a.StartsWith("--lights=")) startLights = (int)Stf.ParseNumber(a.Substring(9), 0);
                 else if (a.StartsWith("--speed=")) startSpeed = Stf.ParseNumber(a.Substring(8), 0);
@@ -327,6 +329,7 @@ namespace LocoTester
                 int pi = page != null ? Array.IndexOf(names, page) : -1;
                 if (pi >= 0) ((RadioButton)F(tabs[pi])).IsChecked = true;
                 if (runCheck) RunSysCheck();
+                if (runUpdate) CheckForUpdates();
                 // test / shortcut options: --power --night --panto --lights=1|2 --speed=kmh --throttle=% --reverse --camera=front|side|rear|top|pov
                 // (anything that drives the loco switches the power on first)
                 DispatcherTimer once = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
@@ -1313,6 +1316,44 @@ namespace LocoTester
         }
 
         // ---------------------------------------------------------------- system check
+
+        /// <summary>Same or older than this copy: just say so. Newer on GitHub: open the release page.</summary>
+        void CheckForUpdates()
+        {
+            Button b = Btn("UpdateBtn");
+            TextBlock t = Txt("UpdateText");
+            b.IsEnabled = false;
+            t.Foreground = new SolidColorBrush(Color.FromRgb(0x9F, 0xB0, 0xCC));
+            t.Text = "Checking GitHub for the latest version…";
+            System.Threading.Thread th = new System.Threading.Thread(delegate()
+            {
+                Updater.Result r = Updater.Check(AppInfo.Version);
+                w.Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    b.IsEnabled = true;
+                    if (r.Error != null)
+                    {
+                        t.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x8A, 0x8A));
+                        t.Text = "⚠ " + r.Error;
+                    }
+                    else if (r.Newer)
+                    {
+                        t.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xB0, 0x6B));
+                        t.Text = "⬆ Update available: v" + r.Latest + " (you have v" + r.Current + "). Opening the download page on GitHub…";
+                        Toast("Update available", "v" + r.Latest + " is on GitHub");
+                        try { Process.Start(r.Url); } catch { t.Text += "  Could not open the browser: " + r.Url; }
+                    }
+                    else
+                    {
+                        t.Foreground = new SolidColorBrush(Color.FromRgb(0x6E, 0xE7, 0xA0));
+                        t.Text = "✔ You have the latest version: v" + r.Current + (Updater.Compare(r.Latest, r.Current) != 0 ? " (GitHub: v" + r.Latest + ")" : "") + ". Nothing to download.";
+                        Toast("Up to date", "v" + r.Current + " is the latest");
+                    }
+                }));
+            });
+            th.IsBackground = true;
+            th.Start();
+        }
 
         void RunSysCheck()
         {

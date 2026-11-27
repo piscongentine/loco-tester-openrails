@@ -643,6 +643,10 @@
                 <StackPanel Grid.Column="1" Margin="28,0,0,0">
                   <TextBlock Text="Loco Tester" FontSize="34" FontWeight="Bold"/>
                   <TextBlock x:Name="AboutVersion" FontSize="15" Foreground="#FF9A3D" Margin="0,2,0,0"/>
+                  <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <Button x:Name="UpdateBtn" Content="⟳  Check for updates" Padding="12,5"/>
+                    <TextBlock x:Name="UpdateText" FontSize="13" Foreground="#9FB0CC" Margin="12,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="560"/>
+                  </StackPanel>
                   <TextBlock FontSize="14" Foreground="#C9D5E8" Margin="0,14,0,0" TextWrapping="Wrap">
                     Made by <Run FontWeight="Bold" Foreground="#FFFFFF">Piscongentine</Run> · Made in Bharat
                   </TextBlock>
